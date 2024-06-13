@@ -1,129 +1,143 @@
 #include <iostream>
-#include <vector>
-#include <stdexcept> // Для использования std::invalid_argument
- 
+#include <iomanip> // Для использования std::setw и std::setfill
 
-class Matrix {
+class Time {
 private:
-    std::vector<std::vector<int>> data;
-    int rows;
-    int cols;
+    int hours;
+    int minutes;
+    int seconds;
 
 public:
-    // Конструктор класса Matrix
-    Matrix(int rows, int cols) : rows(rows), cols(cols) {
-        // Инициализация матрицы нулями
-        data.resize(rows, std::vector<int>(cols, 0));
+    // Конструктор класса
+    Time(int h = 0, int m = 0, int s = 0) : hours(h), minutes(m), seconds(s) {}
+
+    // Перегрузка оператора ввода
+    friend std::istream& operator>>(std::istream& is, Time& time) {
+        is >> time.hours >> time.minutes >> time.seconds;
+        return is;
     }
 
-    // Конструктор копирования
-    Matrix(const Matrix& other) : rows(other.rows), cols(other.cols), data(other.data) {}
+    // Перегрузка оператора вывода
+    friend std::ostream& operator<<(std::ostream& os, const Time& time) {
+        os << std::setw(2) << std::setfill('0') << time.hours << ":"
+            << std::setw(2) << std::setfill('0') << time.minutes << ":"
+            << std::setw(2) << std::setfill('0') << time.seconds;
+        return os;
+    }
 
-    // Оператор присваивания
-    Matrix& operator=(const Matrix& other) {
-        if (this != &other) {
-            rows = other.rows;
-            cols = other.cols;
-            data = other.data;
+    // Метод для перевода времени из 24-часового формата в 12-часовой
+    void convertTo12HourFormat() {
+        if (hours > 12) {
+            hours -= 12;
         }
-        return *this;
     }
 
-    // Перегрузка оператора сложения
-    Matrix operator+(const Matrix& other) const {
-        if (rows != other.rows || cols != other.cols)
-            throw std::invalid_argument("Matrix dimensions must match for addition");
+    // Перегрузка оператора сравнения ">"
+    bool operator>(const Time& other) const {
+        if (hours > other.hours)
+            return true;
+        else if (hours == other.hours && minutes > other.minutes)
+            return true;
+        else if (hours == other.hours && minutes == other.minutes && seconds > other.seconds)
+            return true;
+        return false;
+    }
 
-        Matrix result(rows, cols);
-        for (int i = 0; i < rows; ++i) {
-            for (int j = 0; j < cols; ++j) {
-                result.data[i][j] = data[i][j] + other.data[i][j];
-            }
+    // Перегрузка оператора сравнения "<"
+    bool operator<(const Time& other) const {
+        return !(*this > other) && !(*this == other);
+    }
+
+    // Перегрузка оператора сравнения "!="
+    bool operator!=(const Time& other) const {
+        return !(*this == other);
+    }
+
+    // Перегрузка оператора сравнения "=="
+    bool operator==(const Time& other) const {
+        return hours == other.hours && minutes == other.minutes && seconds == other.seconds;
+    }
+
+    // Перегрузка оператора сложения "+"
+    Time operator+(const Time& other) const {
+        int h = hours + other.hours;
+        int m = minutes + other.minutes;
+        int s = seconds + other.seconds;
+
+        if (s >= 60) {
+            m += s / 60;
+            s %= 60;
         }
-        return result;
+        if (m >= 60) {
+            h += m / 60;
+            m %= 60;
+        }
+        if (h >= 24) {
+            h %= 24;
+        }
+
+        return Time(h, m, s);
     }
 
-    // Перегрузка оператора увеличения на другую матрицу
-    Matrix& operator+=(const Matrix& other) {
+    // Перегрузка оператора увеличения "+="
+    Time& operator+=(const Time& other) {
         *this = *this + other;
         return *this;
     }
 
-    // Перегрузка оператора вычитания
-    Matrix operator-(const Matrix& other) const {
-        if (rows != other.rows || cols != other.cols)
-            throw std::invalid_argument("Matrix dimensions must match for subtraction");
+    // Перегрузка оператора вычитания "-"
+    Time operator-(const Time& other) const {
+        int h = hours - other.hours;
+        int m = minutes - other.minutes;
+        int s = seconds - other.seconds;
 
-        Matrix result(rows, cols);
-        for (int i = 0; i < rows; ++i) {
-            for (int j = 0; j < cols; ++j) {
-                result.data[i][j] = data[i][j] - other.data[i][j];
-            }
+        if (s < 0) {
+            m--;
+            s += 60;
         }
-        return result;
+        if (m < 0) {
+            h--;
+            m += 60;
+        }
+        if (h < 0) {
+            h += 24;
+        }
+
+        return Time(h, m, s);
     }
 
-    // Перегрузка оператора уменьшения на другую матрицу
-    Matrix& operator-=(const Matrix& other) {
+    // Перегрузка оператора уменьшения "-="
+    Time& operator-=(const Time& other) {
         *this = *this - other;
         return *this;
-    }
-
-    // Перегрузка оператора вывода
-    friend std::ostream& operator<<(std::ostream& os, const Matrix& matrix) {
-        for (int i = 0; i < matrix.rows; ++i) {
-            for (int j = 0; j < matrix.cols; ++j) {
-                os << matrix.data[i][j] << " ";
-            }
-            os << std::endl;
-        }
-        return os;
-    }
-
-    // Перегрузка оператора ввода
-    friend std::istream& operator>>(std::istream& is, Matrix& matrix) {
-        for (int i = 0; i < matrix.rows; ++i) {
-            for (int j = 0; j < matrix.cols; ++j) {
-                is >> matrix.data[i][j];
-            }
-        }
-        return is;
     }
 };
 
 int main() {
-    setlocale(LC_ALL, "ru");
-    int rows, cols;
-    std::cout << "Введите количество строк и столбцов матрицы A: ";
-    std::cin >> rows >> cols;
+    Time t1, t2;
+    std::cout << "Enter time 1 (hh:mm:ss): ";
+    std::cin >> t1;
+    std::cout << "Enter time 2 (hh:mm:ss): ";
+    std::cin >> t2;
 
-    // Создание объекта матрицы A
+    std::cout << "Time 1: " << t1 << std::endl;
+    std::cout << "Time 2: " << t2 << std::endl;
 
-    Matrix A(rows, cols);
-    std::cout << "Введите элементы матрицы A:" << std::endl;
-    std::cin >> A;
+    if (t1 > t2) {
+        std::cout << "Time 1 is greater than Time 2" << std::endl;
+    }
+    else if (t1 < t2) {
+        std::cout << "Time 1 is less than Time 2" << std::endl;
+    }
+    else {
+        std::cout << "Time 1 is equal to Time 2" << std::endl;
+    }
 
-    // Вывод матрицы A
-    std::cout << "Матрица A:" << std::endl;
-    std::cout << A;
+    Time sum = t1 + t2;
+    std::cout << "Sum of Time 1 and Time 2: " << sum << std::endl;
 
-    // Создание объекта матрицы B
-    Matrix B(rows, cols);
-    std::cout << "Введите элементы матрицы B:" << std::endl;
-    std::cin >> B;
-
-    // Вывод матрицы B
-    std::cout << "Матрица B:" << std::endl;
-    std::cout << B;
-
-    // Сложение матриц A и B
-    Matrix C = A + B;
-    std::cout << "Матрица A + B:" << std::endl;
-    std::cout << C;
-    // Вычитание матриц A и B
-    Matrix D = A - B;
-    std::cout << "Матрица A - B:" << std::endl;
-    std::cout << D;
+    Time diff = t1 - t2;
+    std::cout << "Difference of Time 1 and Time 2: " << diff << std::endl;
 
     return 0;
 }
